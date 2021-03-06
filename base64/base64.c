@@ -56,33 +56,13 @@ void base64_init_unit(base64_unit *unit, char *src);
 base64_src *base64_from_b64unit(base64_unit *unit);
 char base64_val2key(char val);
 
-int base64_b64_len(char *src, int size) {
-    //补位
-    const int fill = (BASE64_SRC_LEN - (size % BASE64_SRC_LEN)) % BASE64_SRC_LEN;
-    //base64字符串内存分配
-    return (size + fill) / BASE64_SRC_LEN * BASE64_UNIT_LEN + 1;
-}
-
-//计算原数据长度
-int base64_src_len(char *b64, int size) {
-    //补位
-    int fill = 0;
-    if (b64[size - 1] == '=') {
-        fill++;
-    }
-    if (b64[size - 2] == '=') {
-        fill++;
-    }
-    //原数据长度
-    return size / BASE64_UNIT_LEN * BASE64_SRC_LEN + 1;
-}
-
-void base64_encode(char *b64, char *src, int size) {
+int base64_encode(char **b64, char *src, int size) {
     //补位
     const int fill = (BASE64_SRC_LEN - (size % BASE64_SRC_LEN)) % BASE64_SRC_LEN;
     //base64字符串内存分配
     const int b64_len = (size + fill) / BASE64_SRC_LEN * BASE64_UNIT_LEN;
-    b64[b64_len] = '\0';
+    *b64 = calloc(b64_len + 1, sizeof(char));
+    (*b64)[b64_len] = '\0';
     //循环处理次数
     const int count = (size + fill) / BASE64_SRC_LEN;
     for (int i = 0; i < count; ++i) {
@@ -92,21 +72,22 @@ void base64_encode(char *b64, char *src, int size) {
         base64_unit *unit = base64_from_b64src(&b_src);
         //base64转换并赋值
         const int index = i * BASE64_UNIT_LEN;
-        b64[index] = base64_charset[unit->b0];
-        b64[index + 1] = base64_charset[unit->b1];
-        b64[index + 2] = base64_charset[unit->b2];
-        b64[index + 3] = base64_charset[unit->b3];
+        (*b64)[index] = base64_charset[unit->b0];
+        (*b64)[index + 1] = base64_charset[unit->b1];
+        (*b64)[index + 2] = base64_charset[unit->b2];
+        (*b64)[index + 3] = base64_charset[unit->b3];
     }
     //补位赋值=
     if (fill > 0) {
-        b64[b64_len - 1] = '=';
+        (*b64)[b64_len - 1] = '=';
     }
     if (fill > 1) {
-        b64[b64_len - 2] = '=';
+        (*b64)[b64_len - 2] = '=';
     }
+    return b64_len;
 }
 
-void base64_decode(char *src, char *b64, int size) {
+int base64_decode(char **src, char *b64, int size) {
     //补位
     int fill = 0;
     if (b64[size - 1] == '=') {
@@ -117,6 +98,7 @@ void base64_decode(char *src, char *b64, int size) {
     }
     //原数据长度
     const int src_len = size / BASE64_UNIT_LEN * BASE64_SRC_LEN;
+    *src = calloc(src_len + 1, sizeof(char));
     //循环处理次数
     const int count = size / BASE64_UNIT_LEN;
     for (int i = 0; i < count; ++i) {
@@ -126,11 +108,12 @@ void base64_decode(char *src, char *b64, int size) {
         base64_src *b_src = base64_from_b64unit(&unit);
         //base64转换并赋值
         const int index = i * BASE64_SRC_LEN;
-        src[index] = b_src->c0;
-        src[index + 1] = b_src->c1;
-        src[index + 2] = b_src->c2;
+        (*src)[index] = b_src->c0;
+        (*src)[index + 1] = b_src->c1;
+        (*src)[index + 2] = b_src->c2;
     }
-    src[src_len - fill] = '\0';
+    (*src)[src_len - fill] = '\0';
+    return src_len - fill;
 }
 
 void base64_init_b64src(base64_src *b_src, char *src) {
